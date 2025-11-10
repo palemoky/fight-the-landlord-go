@@ -9,6 +9,10 @@ import (
 	"github.com/palemoky/fight-the-landlord-go/internal/rule"
 )
 
+const (
+	PlayerTurnTimeout = 15 * time.Second
+)
+
 // Game 定义游戏状态
 type Game struct {
 	Players           [3]*Player
@@ -25,7 +29,7 @@ type Game struct {
 // UI 是一个接口，定义了游戏与用户交互的所有方法
 type UI interface {
 	DisplayGame(*Game)
-	GetPlayerInput(*Player) string
+	GetPlayerInput(*Player, time.Duration) (string, bool)
 	ShowMessage(string)
 	ShowError(error)
 	ClearScreen()
@@ -89,7 +93,22 @@ func (g *Game) Run() {
 		g.ui.DisplayGame(g)
 		currentPlayer := g.Players[g.CurrentTurn]
 
-		input := g.ui.GetPlayerInput(currentPlayer)
+		// 1. 调用带有倒计时功能的 GetPlayerInput
+		input, timedOut := g.ui.GetPlayerInput(currentPlayer, PlayerTurnTimeout)
+
+		// 5. 根据是否超时来处理输入
+		if timedOut {
+			// 如果是轮到你自由出牌，不能pass，自动打出最小的单牌
+			if g.LastPlayerIdx == g.CurrentTurn || g.LastPlayedHand.IsEmpty() {
+				g.ui.ShowMessage("系统自动为您打出最小的一张牌。")
+				// 查找并“模拟输入”最小的牌
+				minCard := currentPlayer.Hand[len(currentPlayer.Hand)-1] // 因为手牌是排序的，最后一张就是最小的
+				input = minCard.Rank.String()
+			} else {
+				g.ui.ShowMessage("系统自动为您选择“要不起”。")
+				input = "PASS"
+			}
+		}
 
 		if input == "PASS" {
 			if g.LastPlayerIdx == g.CurrentTurn {
@@ -108,7 +127,7 @@ func (g *Game) Run() {
 			continue
 		}
 
-		cardsToPlay, err := rule.FindCardsInHand(currentPlayer.Hand, input) 
+		cardsToPlay, err := rule.FindCardsInHand(currentPlayer.Hand, input)
 		if err != nil {
 			fmt.Println("出牌无效: ", err)
 			time.Sleep(2 * time.Second)

@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+	"bufio"
 
 	"github.com/palemoky/fight-the-landlord-go/internal/card"
 	"github.com/palemoky/fight-the-landlord-go/internal/game"
@@ -165,14 +166,58 @@ func (t *TerminalUI) DisplayGame(g *game.Game) {
 	t.renderPlayerHand(g)
 }
 
-func (t *TerminalUI) GetPlayerInput(p *game.Player) string {
-	// 使用 pterm 的交互式输入
-	input, _ := pterm.DefaultInteractiveTextInput.
-		WithDefaultText("例如: 3334, JOKER, pass").
-		Show("请出牌")
+func (t *TerminalUI) GetPlayerInput(p *game.Player, timeout time.Duration) (string, bool) {
+	// 创建一个 channel 用于从 goroutine 接收输入
+	inputChan := make(chan string)
 
-	pterm.Println()
-	return strings.ToUpper(strings.TrimSpace(input))
+	// 启动一个 goroutine 在后台等待用户输入
+	// 这是一个阻塞操作，所以必须放在 goroutine 中
+	go func() {
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			// 如果读取出错，发送一个特殊信号或关闭 channel
+			close(inputChan)
+			return
+		}
+		inputChan <- input
+	}()
+
+	// 创建一个每秒触发一次的 Ticker
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop() // 确保函数退出时停止 ticker
+
+	// 计算剩余时间
+	remainingSeconds := int(timeout.Seconds())
+
+	// 循环，等待输入或 ticker 触发
+	for {
+		// 构造并打印带倒计时的提示符
+		// \r (Carriage Return) 是关键：它将光标移到行首，允许我们覆盖之前的倒计时
+		prompt := pterm.LightGreen(fmt.Sprintf("\r请出牌 (剩余 %2d 秒): ", remainingSeconds))
+		pterm.Print(prompt)
+
+		select {
+		case input, ok := <-inputChan:
+			// 成功接收到用户输入
+			if !ok {
+				// Channel 被关闭，说明读取出错
+				pterm.Warning.Println("\n输入读取失败！")
+				return "PASS", true // 视为超时
+			}
+			fmt.Println() // 输入完成后换行，保持界面整洁
+			return strings.ToUpper(strings.TrimSpace(input)), false // 返回输入，并未超时
+
+		case <-ticker.C:
+			// Ticker 触发，时间减少一秒
+			remainingSeconds--
+			if remainingSeconds < 0 {
+				// 倒计时结束
+				pterm.Warning.Println("\n操作超时!")
+				return "", true // 返回空字符串，并标记为超时
+			}
+		}
+	}
 }
 
 func (t *TerminalUI) ShowMessage(msg string) {

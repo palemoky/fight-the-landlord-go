@@ -15,6 +15,6 @@ type Player struct {
 
 func (p *Player) SortHand() {
 	sort.Slice(p.Hand, func(i, j int) bool {
-		return p.Hand[i].Rank < p.Hand[j].Rank
+		return p.Hand[i].Rank > p.Hand[j].Rank
 	})
 }
