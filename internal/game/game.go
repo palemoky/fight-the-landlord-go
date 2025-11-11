@@ -85,6 +85,21 @@ func (g *Game) Bidding() {
 	time.Sleep(3 * time.Second)
 }
 
+func (g *Game) IsLandlordCardPlayed(c card.Card) bool {
+	// 获取当前场上该点数牌的剩余数量
+	remainingCount := g.CardCounter.GetRemainingCards()[c.Rank]
+
+	// 定义一副牌中每个点数的初始数量
+	initialCount := 4
+	if c.Rank == card.RankBlackJoker || c.Rank == card.RankRedJoker {
+		initialCount = 1
+	}
+
+	// 如果剩余数量 < 初始数量，意味着至少有一张该点数的牌被打出
+	// 对于UI显示来说，这足以作为“灰度化”底牌的依据
+	return remainingCount < initialCount
+}
+
 func (g *Game) Run() {
 	g.Deal()
 	g.Bidding()

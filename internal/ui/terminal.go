@@ -43,10 +43,11 @@ func renderCards(cards []card.Card) string {
 
 // renderCardContent 将单张牌渲染成带样式的字符串内容，例如 "♥A"
 func (t *TerminalUI) renderCardContent(c card.Card, str string) string {
-	styleRed := pterm.NewRGBStyle(pterm.NewRGB(192, 0, 0), pterm.NewRGB(210, 196, 191))
-	styleBlack := pterm.NewStyle(pterm.FgBlack, pterm.BgWhite)
+	styleRed := pterm.NewRGBStyle(pterm.NewRGB(192, 0, 0), pterm.NewRGB(228, 215, 215))
+	styleBlack := pterm.NewRGBStyle(pterm.NewRGB(68, 67, 77), pterm.NewRGB(228, 215, 215))
 
-	content := fmt.Sprintf("%-2s", str)
+	// content := fmt.Sprintf("%-2s", str)
+	content := t.getCardContentString(c)
 
 	styledCard := styleBlack.Sprint(content)
 	if c.Color == card.Red {
@@ -56,17 +57,42 @@ func (t *TerminalUI) renderCardContent(c card.Card, str string) string {
 	return styledCard
 }
 
+// getCardContentString 获取卡牌内容的纯字符串，用于统一格式
+func (t *TerminalUI) getCardContentString(c card.Card) string {
+	suitStr := c.Suit.String()
+	if c.Suit == card.Joker {
+		suitStr = ""
+	}
+	return fmt.Sprintf("%-5s", suitStr+c.Rank.String())
+}
+
 // renderFancyHand 负责将一手牌渲染成漂亮的、重叠的ASCII艺术风格
-func (t *TerminalUI) renderFancyHand(hand []card.Card) string {
+func (t *TerminalUI) renderFancyHand(hand []card.Card, g *game.Game) string {
 	if len(hand) == 0 {
 		return pterm.Gray(" ")
 	}
 
+	// 灰字 + 浅灰背景
+	stylePlayed := pterm.NewRGBStyle(pterm.NewRGB(128, 128, 128), pterm.NewRGB(220, 220, 220))
+
 	var top, rank, suit, bottom strings.Builder
 	for _, c := range hand {
+		isPlayed := false
+		// 如果传入了 game 对象 (即我们正在渲染底牌), 则检查卡牌状态
+		if g != nil {
+			isPlayed = g.IsLandlordCardPlayed(c)
+		}
+
 		top.WriteString(TopBorderStart)
-		rank.WriteString(SideBorder + t.renderCardContent(c, c.Rank.String()))
-		suit.WriteString(SideBorder + t.renderCardContent(c, c.Suit.String()))
+		if isPlayed {
+			// 如果牌已出，使用“已出”样式
+			// styledContent = stylePlayed.Sprint(t.getCardContentString(c))
+			rank.WriteString(SideBorder + stylePlayed.Sprint(t.getCardContentString(c)))
+			suit.WriteString(SideBorder + stylePlayed.Sprint(t.getCardContentString(c)))
+		} else {
+			rank.WriteString(SideBorder + t.renderCardContent(c, c.Rank.String()))
+			suit.WriteString(SideBorder + t.renderCardContent(c, c.Suit.String()))
+		}
 		bottom.WriteString(BottomBorderStart)
 	}
 
@@ -121,7 +147,7 @@ func (t *TerminalUI) renderPlayerHand(g *game.Game) {
 	}
 	pterm.DefaultSection.Printf("轮到你了, %s!", nameStyle.Sprint(currentPlayer.Name))
 	// pterm.Println("你的手牌:")
-	pterm.Println(t.renderFancyHand(currentPlayer.Hand))
+	pterm.Println(t.renderFancyHand(currentPlayer.Hand, nil))
 	pterm.Println()
 }
 
@@ -143,8 +169,8 @@ func (t *TerminalUI) renderCounterGrid(g *game.Game) string {
 			rankCard = card.Card{Suit: card.Joker, Rank: rank, Color: card.Red}
 		}
 		// 复用 renderCardContent 来获取带样式的牌面内容
-		ranks.WriteString("│" + t.renderCardContent(rankCard, rank.String()))
-		cards.WriteString("│" + t.renderCardContent(rankCard, " "))
+		ranks.WriteString(SideBorder + t.renderCardContent(rankCard, rank.String()))
+		cards.WriteString(SideBorder + t.renderCardContent(rankCard, " "))
 
 		// --- 构建数量行 ---
 		count := remainingCards[rank]
@@ -188,12 +214,12 @@ func (t *TerminalUI) DisplayGame(g *game.Game) {
 
 	// 底牌信息
 	var landlordCardsBuilder strings.Builder
-	landlordCardsBuilder.WriteString(t.renderFancyHand(g.LandlordCards))
+	landlordCardsBuilder.WriteString(t.renderFancyHand(g.LandlordCards, g))
 	landlordCardsStr := landlordCardsBuilder.String()
 
 	paddedBox := pterm.DefaultBox
 	playerInfo := paddedBox.WithTitle("玩家信息 (Player Info)").Sprint(playerInfoContent)
-	cardCounter := paddedBox.WithTitle("记牌器").Sprint(counterGridStr)
+	cardCounter := paddedBox.WithTitle("记牌器 (Card Counter)").Sprint(counterGridStr)
 	landlordsCards := paddedBox.WithTitle("底牌").WithTitleTopCenter().Sprint(landlordCardsStr)
 	pterm.DefaultPanel.WithPanels([][]pterm.Panel{
 		{{Data: cardCounter}},
