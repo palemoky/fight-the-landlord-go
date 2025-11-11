@@ -1,13 +1,16 @@
 package game
 
 import (
+	"bufio"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/palemoky/fight-the-landlord-go/internal/card"
 	"github.com/palemoky/fight-the-landlord-go/internal/rule"
+	"github.com/pterm/pterm"
 )
 
 const (
@@ -24,13 +27,14 @@ type Game struct {
 	LastPlayerIdx     int             // 上家
 	ConsecutivePasses int
 	CardCounter       *card.CardCounter
+	RemainingSeconds  int // 剩余出牌时间
 	ui                UI
 }
 
 // UI 是一个接口，定义了游戏与用户交互的所有方法
 type UI interface {
 	DisplayGame(*Game)
-	GetPlayerInput(*Player, time.Duration) (string, bool)
+	// GetPlayerInput(*Player, time.Duration) (string, bool)
 	ShowMessage(string)
 	ShowError(error)
 	ClearScreen()
@@ -102,6 +106,64 @@ func (g *Game) IsLandlordCardPlayed(c card.Card) bool {
 	return remainingCount < initialCount
 }
 
+func (g *Game) getPlayerInput() (string, bool) {
+	// 创建一个 channel 用于从 goroutine 接收输入
+	inputChan := make(chan string)
+
+	// 启动一个 goroutine 在后台等待用户输入
+	// 这是一个阻塞操作，所以必须放在 goroutine 中
+	go func() {
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			// 如果读取出错，发送一个特殊信号或关闭 channel
+			close(inputChan)
+			return
+		}
+		inputChan <- input
+	}()
+
+	// 创建一个每秒触发一次的 Ticker
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop() // 确保函数退出时停止 ticker
+
+	// 计算剩余时间
+	g.RemainingSeconds = int(PlayerTurnTimeout.Seconds())
+	area, _ := pterm.DefaultArea.Start()
+
+	// 循环，等待输入或 ticker 触发
+	for {
+		currentPlayer := g.Players[g.CurrentTurn]
+		nameStyle := pterm.NewStyle(pterm.FgLightCyan, pterm.Bold)
+		if currentPlayer.IsLandlord {
+			nameStyle = pterm.NewStyle(pterm.FgLightYellow, pterm.Bold)
+		}
+
+		area.Update(pterm.Sprintf("轮到你了, %s! ⏳ 剩余出牌时间: %2ds\n请出牌 %s:", nameStyle.Sprint(currentPlayer.Name), g.RemainingSeconds,""))
+
+		select {
+		case input, ok := <-inputChan:
+			// 成功接收到用户输入
+			if !ok {
+				// Channel 被关闭，说明读取出错
+				pterm.Warning.Println("\n输入读取失败！")
+				return "PASS", true // 视为超时
+			}
+			fmt.Println()                                           // 输入完成后换行，保持界面整洁
+			return strings.ToUpper(strings.TrimSpace(input)), false // 返回输入，并未超时
+
+		case <-ticker.C:
+			// Ticker 触发，时间减少一秒
+			g.RemainingSeconds--
+			if g.RemainingSeconds < 0 {
+				// 倒计时结束
+				pterm.Warning.Println("\n操作超时!")
+				return "", true // 返回空字符串，并标记为超时
+			}
+		}
+	}
+}
+
 func (g *Game) Run() {
 	g.Deal()
 	g.Bidding()
@@ -110,8 +172,7 @@ func (g *Game) Run() {
 		g.ui.DisplayGame(g)
 		currentPlayer := g.Players[g.CurrentTurn]
 
-		// 1. 调用带有倒计时功能的 GetPlayerInput
-		input, timedOut := g.ui.GetPlayerInput(currentPlayer, PlayerTurnTimeout)
+		input, timedOut := g.getPlayerInput()
 
 		upperInput := strings.ToUpper(input)
 		if upperInput == "HELP" || upperInput == "RULES" {
@@ -119,7 +180,7 @@ func (g *Game) Run() {
 			continue            // 跳过本轮的后续逻辑，重新渲染游戏界面
 		}
 
-		// 5. 根据是否超时来处理输入
+		// 根据是否超时来处理输入
 		if timedOut {
 			// 如果是轮到你自由出牌，不能pass，自动打出最小的单牌
 			if g.LastPlayerIdx == g.CurrentTurn || g.LastPlayedHand.IsEmpty() {
