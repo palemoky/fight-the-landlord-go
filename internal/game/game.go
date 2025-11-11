@@ -184,9 +184,9 @@ func (g *Game) Run() {
 				g.ui.DisplayGame(g)
 				fmt.Println("\n================== 游戏结束 ==================")
 				if currentPlayer.IsLandlord {
-					fmt.Printf("地主 (%s) 获胜!\n", currentPlayer.Name)
+					fmt.Printf("🎉 地主 (%s) 获胜!\n", currentPlayer.Name)
 				} else {
-					fmt.Printf("农民 (%s) 获胜!\n", currentPlayer.Name)
+					fmt.Printf("🥳 农民 (%s) 获胜!\n", currentPlayer.Name)
 				}
 				return
 			}
