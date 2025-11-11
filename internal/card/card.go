@@ -141,20 +141,3 @@ func (d Deck) Shuffle() {
 	})
 }
 
-func (c Card) RenderCard(str string) string {
-	// 手牌的样式
-	styleRed := pterm.NewRGBStyle(pterm.NewRGB(192, 0, 0), pterm.NewRGB(210, 196, 191))
-	styleBlack := pterm.NewStyle(pterm.FgBlack, pterm.BgWhite)
-
-	// 格式化牌的内容，例如 "♥K  " 或 "♠10 " (左对齐，总宽度4)
-	s := fmt.Sprintf("%-2s", str)
-
-	// 根据牌的颜色选择样式
-	var rankStyledContent string
-	rankStyledContent = styleBlack.Sprint(s)
-	if c.Color == Red {
-		rankStyledContent = styleRed.Sprint(s)
-	}
-
-	return rankStyledContent
-}

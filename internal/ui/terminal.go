@@ -15,6 +15,16 @@ import (
 	"github.com/pterm/pterm/putils"
 )
 
+const (
+	TopBorderStart    = "┌──"
+	TopBorderEnd      = "┐"
+	SideBorder        = "│"
+	SeparatorStart    = "├──"
+	SeparatorEnd      = "┤"
+	BottomBorderStart = "└──"
+	BottomBorderEnd   = "┘"
+)
+
 type TerminalUI struct{}
 
 func NewTerminalUI() *TerminalUI {
@@ -22,107 +32,84 @@ func NewTerminalUI() *TerminalUI {
 	return &TerminalUI{}
 }
 
-// renderPlayerInfo 负责生成玩家信息区域的字符串内容
-func (t *TerminalUI) renderPlayerInfo(g *game.Game) string {
+func renderCards(cards []card.Card) string {
 	var sb strings.Builder
-	for i, p := range g.Players {
-		icon := "👨" // 农民图标
-		style := pterm.NewStyle(pterm.FgLightWhite)
-		if p.IsLandlord {
-			icon = "👑" // 地主图标
-			style = pterm.NewStyle(pterm.FgLightYellow, pterm.Bold)
-		}
-		if i == g.CurrentTurn {
-			icon = "👉" + icon // 指示当前玩家
-			// style = style.WithStyle(pterm.Italic)
-			style = pterm.NewStyle(pterm.FgLightWhite, pterm.Italic)
-		}
-
-		sb.WriteString(style.Sprintf("%s %s", icon, p.Name))
-		sb.WriteString(fmt.Sprintf("\n  剩余牌数: %d\n", len(p.Hand)))
+	for _, c := range cards {
+		sb.WriteString(c.String())
+		sb.WriteString(" ")
 	}
 	return sb.String()
 }
 
-// renderCardCounter 负责生成记牌器表格的字符串内容
-func (t *TerminalUI) renderCardCounter(g *game.Game) string {
-	displayOrder := []card.Rank{
-		card.RankRedJoker, card.RankBlackJoker, card.Rank2, card.RankA, card.RankK,
-		card.RankQ, card.RankJ, card.Rank10, card.Rank9, card.Rank8,
-		card.Rank7, card.Rank6, card.Rank5, card.Rank4, card.Rank3,
+// renderCardContent 将单张牌渲染成带样式的字符串内容，例如 "♥A"
+func (t *TerminalUI) renderCardContent(c card.Card, str string) string {
+	styleRed := pterm.NewRGBStyle(pterm.NewRGB(192, 0, 0), pterm.NewRGB(210, 196, 191))
+	styleBlack := pterm.NewStyle(pterm.FgBlack, pterm.BgWhite)
+
+	content := fmt.Sprintf("%-2s", str)
+
+	styledCard := styleBlack.Sprint(content)
+	if c.Color == card.Red {
+		styledCard = styleRed.Sprint(content)
 	}
 
-	headerRow, countRow := []string{}, []string{}
-	remainingCards := g.CardCounter.GetRemainingCards()
-
-	for _, rank := range displayOrder {
-		var rankCard card.Card
-		if rank == card.RankRedJoker {
-			rankCard = card.Card{Suit: card.Joker, Rank: rank, Color: card.Red}
-		} else {
-			rankCard = card.Card{Suit: card.Joker, Rank: rank, Color: card.Black}
-		}
-		headerRow = append(headerRow, rankCard.String())
-
-		count := remainingCards[rank]
-		var countStr string
-		if count == 0 {
-			countStr = pterm.NewStyle(pterm.FgRed, pterm.Strikethrough).Sprintf(" %d ", count)
-		} else if count <= 2 {
-			countStr = pterm.NewStyle(pterm.FgYellow).Sprintf(" %d ", count)
-		} else {
-			countStr = pterm.NewStyle(pterm.FgGreen).Sprintf(" %d ", count)
-		}
-		countRow = append(countRow, countStr)
-	}
-
-	tableData := pterm.TableData{headerRow, countRow}
-	// Srender() 将组件渲染为字符串
-	tableString, _ := pterm.DefaultTable.WithData(tableData).WithBoxed().Srender()
-	return tableString
+	return styledCard
 }
 
 // renderFancyHand 负责将一手牌渲染成漂亮的、重叠的ASCII艺术风格
 func (t *TerminalUI) renderFancyHand(hand []card.Card) string {
 	if len(hand) == 0 {
-		return "  "
+		return pterm.Gray(" ")
 	}
 
-	// 使用三个 strings.Builder 来高效地构建每一行
 	var top, rank, suit, bottom strings.Builder
-
-	// 循环构建每一张牌的“主体”部分
 	for _, c := range hand {
-		rankStr := c.Rank.String()
-		suitStr := c.Suit.String()
-
-		top.WriteString("┌──")
-		rank.WriteString("│" + c.RenderCard(rankStr))
-		suit.WriteString("│" + c.RenderCard(suitStr))
-		bottom.WriteString("└──")
+		top.WriteString(TopBorderStart)
+		rank.WriteString(SideBorder + t.renderCardContent(c, c.Rank.String()))
+		suit.WriteString(SideBorder + t.renderCardContent(c, c.Suit.String()))
+		bottom.WriteString(BottomBorderStart)
 	}
 
-	// 为最后一张牌添加“封口”
-	top.WriteString("┐")
-	rank.WriteString("│")
-	suit.WriteString("│")
-	bottom.WriteString("┘")
+	top.WriteString(TopBorderEnd)
+	rank.WriteString(SideBorder)
+	suit.WriteString(SideBorder)
+	bottom.WriteString(BottomBorderEnd)
 
-	// 将4行拼接成最终的输出
 	return fmt.Sprintf("%s\n%s\n%s\n%s", top.String(), rank.String(), suit.String(), bottom.String())
 }
 
-// renderGameState 负责生成场上情况区域的字符串内容
-func (t *TerminalUI) renderGameState(g *game.Game) string {
-	if !g.LastPlayedHand.IsEmpty() {
-		lastPlayer := g.Players[g.LastPlayerIdx]
-		lastPlayerName := lastPlayer.Name
-		if lastPlayer.IsLandlord {
-			lastPlayerName = pterm.LightYellow(lastPlayerName, " (地主)")
+// renderPlayerInfo 负责生成玩家信息区域的字符串内容
+func (t *TerminalUI) renderPlayerInfoBox(g *game.Game) string {
+	var sb strings.Builder
+	for i, p := range g.Players {
+		icon := "👨" // farmer icon
+		style := pterm.NewStyle(pterm.FgLightWhite)
+		if p.IsLandlord {
+			icon = "👑" // landlord icon
+			style = pterm.NewStyle(pterm.FgLightYellow, pterm.Bold)
 		}
-		return fmt.Sprintf("上家 (%s) 出的牌:\n%s", lastPlayerName, t.renderFancyHand(g.LastPlayedHand.Cards))
+		if i == g.CurrentTurn {
+			icon = "👉" + icon // current player
+			style = pterm.NewStyle(pterm.FgLightWhite, pterm.Italic)
+		}
+
+		sb.WriteString(style.Sprintf("%s %s", icon, p.Name))
+		sb.WriteString(fmt.Sprintf("\n  剩余: %d\n", len(p.Hand)))
+
+		// 显示上次出牌
+		sb.WriteString("上次出牌: ")
+		if i == g.LastPlayerIdx && !g.LastPlayedHand.IsEmpty() {
+			// 只为上一个出牌的玩家显示其出的牌
+			sb.WriteString("\n")
+			// 使用简单的 renderCards 避免占用太多空间
+			sb.WriteString(renderCards(g.LastPlayedHand.Cards))
+		} else {
+			sb.WriteString(pterm.Gray("(无)"))
+		}
+		sb.WriteString("\n\n")
 	}
-	return pterm.Green("现在是你的回合, 请随意出牌。")
+
+	return strings.TrimRight(sb.String(), "\n")
 }
 
 // renderPlayerHand 负责生成当前玩家手牌和提示的字符串内容
@@ -133,12 +120,61 @@ func (t *TerminalUI) renderPlayerHand(g *game.Game) {
 		nameStyle = pterm.NewStyle(pterm.FgLightYellow, pterm.Bold)
 	}
 	pterm.DefaultSection.Printf("轮到你了, %s!", nameStyle.Sprint(currentPlayer.Name))
-	pterm.Println("你的手牌:")
+	// pterm.Println("你的手牌:")
 	pterm.Println(t.renderFancyHand(currentPlayer.Hand))
 	pterm.Println()
 }
 
-// DisplayGame 现在是UI布局的指挥官
+// renderCounterGrid 手动绘制记牌器
+func (t *TerminalUI) renderCounterGrid(g *game.Game) string {
+	displayOrder := []card.Rank{
+		card.RankRedJoker, card.RankBlackJoker, card.Rank2, card.RankA, card.RankK,
+		card.RankQ, card.RankJ, card.Rank10, card.Rank9, card.Rank8,
+		card.Rank7, card.Rank6, card.Rank5, card.Rank4, card.Rank3,
+	}
+
+	var top, ranks, cards, separator, counts, bottom strings.Builder
+	remainingCards := g.CardCounter.GetRemainingCards()
+
+	for _, rank := range displayOrder {
+		// --- 构建牌面行 ---
+		rankCard := card.Card{Suit: card.Joker, Rank: rank, Color: card.Black}
+		if rank == card.RankRedJoker {
+			rankCard = card.Card{Suit: card.Joker, Rank: rank, Color: card.Red}
+		}
+		// 复用 renderCardContent 来获取带样式的牌面内容
+		ranks.WriteString("│" + t.renderCardContent(rankCard, rank.String()))
+		cards.WriteString("│" + t.renderCardContent(rankCard, " "))
+
+		// --- 构建数量行 ---
+		count := remainingCards[rank]
+		var countStr string
+		if count == 0 {
+			countStr = pterm.NewStyle(pterm.FgRed, pterm.Strikethrough).Sprintf("%d ", count)
+		} else if count <= 2 {
+			countStr = pterm.NewStyle(pterm.FgYellow).Sprintf("%d ", count)
+		} else {
+			countStr = pterm.NewStyle(pterm.FgGreen).Sprintf("%d ", count)
+		}
+		counts.WriteString(SideBorder + countStr)
+
+		top.WriteString(TopBorderStart)
+		separator.WriteString(SeparatorStart)
+		bottom.WriteString(BottomBorderStart)
+	}
+
+	top.WriteString(TopBorderEnd)
+	ranks.WriteString(SideBorder)
+	cards.WriteString(SideBorder)
+	separator.WriteString(SeparatorEnd)
+	counts.WriteString(SideBorder)
+	bottom.WriteString(BottomBorderEnd)
+
+	return fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s",
+		top.String(), ranks.String(), cards.String(), separator.String(), counts.String(), bottom.String())
+}
+
+// DisplayGame 总指挥
 func (t *TerminalUI) DisplayGame(g *game.Game) {
 	t.ClearScreen()
 
@@ -147,42 +183,24 @@ func (t *TerminalUI) DisplayGame(g *game.Game) {
 	pterm.DefaultCenter.Println(logo)
 	pterm.DefaultCenter.Println("Input Note: T->10; BJ->Black Joker; RJ->Red Joker; Pass")
 
-	// 2. 获取各个区域的内容字符串
-	playerInfoStr := t.renderPlayerInfo(g)
-	gameStateStr := t.renderGameState(g)
-	cardCounterStr := t.renderCardCounter(g)
+	playerInfoContent := t.renderPlayerInfoBox(g) // 玩家信息
+	counterGridStr := t.renderCounterGrid(g)      // 记牌器
 
-	// 3. 使用 Columns 并排渲染“玩家信息”和“场上情况”
-	// 我们将 Box 渲染成字符串 (Sprint)，然后交给 Columns 安排
+	// 底牌信息
+	var landlordCardsBuilder strings.Builder
+	landlordCardsBuilder.WriteString(t.renderFancyHand(g.LandlordCards))
+	landlordCardsStr := landlordCardsBuilder.String()
+
+	paddedBox := pterm.DefaultBox
+	playerInfo := paddedBox.WithTitle("玩家信息 (Player Info)").Sprint(playerInfoContent)
+	cardCounter := paddedBox.WithTitle("记牌器").Sprint(counterGridStr)
+	landlordsCards := paddedBox.WithTitle("底牌").WithTitleTopCenter().Sprint(landlordCardsStr)
 	pterm.DefaultPanel.WithPanels([][]pterm.Panel{
-		{
-			{
-				Data: pterm.DefaultBox.
-					WithTitle("场上情况").
-					WithTitleTopCenter().
-					WithBoxStyle(pterm.NewStyle(pterm.FgLightGreen)).
-					Sprint(gameStateStr),
-			},
-		},
-		{
-			{
-				Data: pterm.DefaultBox.
-					WithTitle("玩家信息").
-					WithTitleTopCenter().
-					WithBoxStyle(pterm.NewStyle(pterm.FgLightBlue)).
-					Sprint(playerInfoStr),
-			},
-			{
-				Data: pterm.DefaultBox.
-					WithTitle("记牌器").
-					WithTitleTopCenter().
-					WithBoxStyle(pterm.NewStyle(pterm.FgLightYellow)).
-					Sprint(cardCounterStr), // Println 直接渲染 Box 和其内容
-			},
-		},
-	}).Render() // Render() 将 Columns 打印出来
+		{{Data: cardCounter}},
+		{{Data: playerInfo}, {Data: landlordsCards}},
+	}).Render()
 
-	// 5. 渲染当前玩家的手牌和操作提示
+	// 渲染当前玩家的手牌和操作提示
 	t.renderPlayerHand(g)
 }
 
