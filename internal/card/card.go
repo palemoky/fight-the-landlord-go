@@ -1,12 +1,9 @@
 package card
 
 import (
-	"fmt"
 	"math/rand"
 	"strconv"
 	"time"
-
-	"github.com/pterm/pterm"
 )
 
 // Suit 定义花色
@@ -30,22 +27,6 @@ type Card struct {
 	Color CardColor
 }
 
-func (c Card) String() string {
-	var cardStr string
-	if c.Suit == Joker {
-		cardStr = fmt.Sprintf(" %s ", c.Rank.String())
-	} else {
-		cardStr = fmt.Sprintf("%s%-2s", c.Suit.String(), c.Rank.String())
-	}
-
-	if c.Color == Red {
-		// 红牌使用红色前景和白色背景
-		return pterm.NewStyle(pterm.FgRed, pterm.BgWhite).Sprint(cardStr)
-	}
-	// 黑牌使用默认颜色（黑色前景）和白色背景
-	return pterm.NewStyle(pterm.FgBlack, pterm.BgWhite).Sprint(cardStr)
-}
-
 const (
 	Spade   Suit = iota // 黑桃
 	Heart               // 红心
@@ -65,7 +46,7 @@ func (s Suit) String() string {
 	case Diamond:
 		return "♦"
 	case Joker:
-		return "♔"
+		return ""
 	default:
 		return ""
 	}
@@ -106,7 +87,6 @@ func (r Rank) String() string {
 	case RankRedJoker:
 		return "R"
 	default:
-		// 确保 10 不会破坏对齐
 		if r == Rank10 {
 			return "10"
 		}
@@ -130,7 +110,6 @@ func NewDeck() Deck {
 	}
 	deck = append(deck, Card{Suit: Joker, Rank: RankBlackJoker, Color: Black})
 	deck = append(deck, Card{Suit: Joker, Rank: RankRedJoker, Color: Red})
-
 	return deck
 }
 
@@ -140,4 +119,3 @@ func (d Deck) Shuffle() {
 		d[i], d[j] = d[j], d[i]
 	})
 }
-
