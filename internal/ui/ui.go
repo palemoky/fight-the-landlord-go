@@ -27,15 +27,15 @@ const (
 
 // --- Lipgloss Styles ---
 var (
-	docStyle      = lipgloss.NewStyle().Margin(1, 2)
-	redStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("#CD0000")).Background(lipgloss.Color("#FFFFFF")).Bold(true)
-	blackStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("0")).Background(lipgloss.Color("#FFFFFF")).Bold(true)
-	grayStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Background(lipgloss.Color("#FFFFFF")).Bold(true)
-	titleStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("228")).Bold(true).Render
-	boxStyle      = lipgloss.NewStyle().Border(lipgloss.RoundedBorder())
-	promptStyle   = lipgloss.NewStyle().MarginTop(1)
-	errorStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
-	ranks         = []card.Rank{card.RankRedJoker, card.RankBlackJoker, card.Rank2, card.RankA, card.RankK, card.RankQ, card.RankJ, card.Rank10, card.Rank9, card.Rank8, card.Rank7, card.Rank6, card.Rank5, card.Rank4, card.Rank3}
+	docStyle     = lipgloss.NewStyle().Margin(1, 2)
+	redStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#CD0000")).Background(lipgloss.Color("#FFFFFF")).Bold(true)
+	blackStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("0")).Background(lipgloss.Color("#FFFFFF")).Bold(true)
+	grayStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Background(lipgloss.Color("#FFFFFF")).Bold(true)
+	titleStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("228")).Bold(true).Render
+	boxStyle     = lipgloss.NewStyle().Border(lipgloss.RoundedBorder())
+	promptStyle  = lipgloss.NewStyle().MarginTop(1)
+	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	displayOrder = []card.Rank{card.RankRedJoker, card.RankBlackJoker, card.Rank2, card.RankA, card.RankK, card.RankQ, card.RankJ, card.Rank10, card.Rank9, card.Rank8, card.Rank7, card.Rank6, card.Rank5, card.Rank4, card.Rank3}
 )
 
 // model 是 Bubble Tea 应用的状态
@@ -176,15 +176,22 @@ func (m model) renderCardCounter() string {
 	var rankStr, countStr strings.Builder
 	remaining := m.game.CardCounter.GetRemainingCards()
 
-	for _, r := range ranks {
+	handCardsCounter := map[card.Rank]int{}
+	for _, card := range m.game.Players[0].Hand {
+		handCardsCounter[card.Rank]++
+	}
+
+	// 根据用户手牌显示剩余牌数
+	for _, r := range displayOrder {
 		rankStr.WriteString(fmt.Sprintf(" %-2s", r.String()))
-		count := remaining[r]
-		var cStr string
-		if count == 0 {
-			cStr = errorStyle.Render(fmt.Sprintf(" %-2d", count))
-		} else {
+		count, cStr := 0, ""
+		if num, found := handCardsCounter[r]; found {
+			count = remaining[r] - num
 			cStr = fmt.Sprintf(" %-2d", count)
+		} else {
+			cStr = grayStyle.Render(fmt.Sprintf(" %-2d", count))
 		}
+
 		countStr.WriteString(cStr)
 	}
 	content := lipgloss.JoinVertical(lipgloss.Center, "记牌器 (Card Counter)", rankStr.String(), countStr.String())
