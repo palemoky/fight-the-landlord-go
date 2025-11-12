@@ -157,10 +157,7 @@ func (m model) View() string {
 	remainingSpace := m.width - usedWidth - (docStyle.GetHorizontalMargins() * 2)
 
 	// 我们需要两个间隔，所以每个间隔的宽度是剩余空间的一半
-	spacerWidth := remainingSpace / 2
-	if spacerWidth < 0 {
-		spacerWidth = 0
-	}
+	spacerWidth := max(remainingSpace/2, 0)
 	spacer := lipgloss.NewStyle().Width(spacerWidth).Render()
 	middleSection := lipgloss.JoinHorizontal(lipgloss.Top, player2View, spacer, lastPlayView, spacer, player3View)
 
@@ -314,7 +311,7 @@ func (m model) renderTurnPrompt() string {
 	var sb strings.Builder
 
 	// 根据轮到谁来显示不同的提示和计时器
-	prompt := fmt.Sprintf("⏳ ⏱ %s", m.timer.View())
+	prompt := fmt.Sprintf("⏳ %s", m.timer.View())
 	if m.game.CurrentTurn == 0 {
 		sb.WriteString(fmt.Sprintf("轮到你了, %s! %s\n", currentPlayer.Name, prompt))
 		sb.WriteString(m.input.View())
