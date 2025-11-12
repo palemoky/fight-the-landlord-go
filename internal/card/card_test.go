@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pterm/pterm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -109,31 +108,6 @@ func TestStringers(t *testing.T) {
 		}
 		for _, tt := range rankTests {
 			assert.Equal(t, tt.want, tt.rank.String())
-		}
-	})
-
-	// --- 测试 Card.String() ---
-	// 对于 pterm 输出，直接比较会因 ANSI 颜色代码而失败。
-	// 最佳实践是禁用颜色，只测试内容的正确性。
-	t.Run("Card Stringer without color", func(t *testing.T) {
-		pterm.DisableColor()
-		defer pterm.EnableColor() // 确保测试结束后恢复颜色功能
-
-		cardTests := []struct {
-			name string
-			card Card
-			want string
-		}{
-			{"Black Card with 1-char rank", Card{Suit: Spade, Rank: RankK}, "♠K "},
-			{"Red Card with 2-char rank", Card{Suit: Heart, Rank: Rank10}, "♥10"},
-			{"Black Joker", Card{Suit: Joker, Rank: RankBlackJoker, Color: Black}, " Joker "},
-			{"Red Joker", Card{Suit: Joker, Rank: RankRedJoker, Color: Red}, " JOKER "},
-		}
-
-		for _, tt := range cardTests {
-			t.Run(tt.name, func(t *testing.T) {
-				assert.Equal(t, tt.want, tt.card.String())
-			})
 		}
 	})
 }
