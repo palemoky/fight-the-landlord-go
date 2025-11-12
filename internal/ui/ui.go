@@ -173,25 +173,27 @@ func (m model) renderCard(c card.Card, content string) string {
 }
 
 func (m model) renderCardCounter() string {
-	var rankStr, countStr strings.Builder
+	// 获取总牌数
 	remaining := m.game.CardCounter.GetRemainingCards()
 
-	handCardsCounter := map[card.Rank]int{}
+	// 统计用户手中的牌
+	handCounter := make(map[card.Rank]int)
 	for _, card := range m.game.Players[0].Hand {
-		handCardsCounter[card.Rank]++
+		handCounter[card.Rank]++
 	}
 
 	// 根据用户手牌显示剩余牌数
+	var rankStr, countStr strings.Builder
 	for _, r := range displayOrder {
 		rankStr.WriteString(fmt.Sprintf(" %-2s", r.String()))
-		count, cStr := 0, ""
-		if num, found := handCardsCounter[r]; found {
-			count = remaining[r] - num
-			cStr = fmt.Sprintf(" %-2d", count)
-		} else {
-			cStr = grayStyle.Render(fmt.Sprintf(" %-2d", count))
-		}
+		leftCount := remaining[r] - handCounter[r]
 
+		cStr := ""
+		if leftCount > 0 {
+			cStr = grayStyle.MarginLeft(1).Render(fmt.Sprintf("%-2d", leftCount))
+		} else {
+			cStr = fmt.Sprintf(" %-2d", leftCount)
+		}
 		countStr.WriteString(cStr)
 	}
 	content := lipgloss.JoinVertical(lipgloss.Center, "记牌器 (Card Counter)", rankStr.String(), countStr.String())
