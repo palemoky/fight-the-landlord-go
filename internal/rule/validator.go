@@ -4,24 +4,24 @@ import (
 	"github.com/palemoky/fight-the-landlord-go/internal/card"
 )
 
-// parseRocket 王炸
-func parseRocket(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
+// isRocket 王炸
+func isRocket(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
 	if len(cards) == 2 && analysis.counts[card.RankBlackJoker] == 1 && analysis.counts[card.RankRedJoker] == 1 {
 		return ParsedHand{Type: Rocket, KeyRank: card.RankRedJoker, Cards: cards}, true
 	}
 	return ParsedHand{}, false
 }
 
-// parseBomb 炸弹
-func parseBomb(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
+// isBomb 炸弹
+func isBomb(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
 	if len(analysis.fours) == 1 && len(cards) == 4 {
 		return ParsedHand{Type: Bomb, KeyRank: analysis.fours[0], Cards: cards}, true
 	}
 	return ParsedHand{}, false
 }
 
-// parseFourWithKickers 四带二
-func parseFourWithKickers(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
+// isFourWithKickers 四带二
+func isFourWithKickers(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
 	cardLen := len(cards)
 	if len(analysis.fours) == 1 {
 		hand := ParsedHand{KeyRank: analysis.fours[0], Cards: cards}
@@ -38,8 +38,8 @@ func parseFourWithKickers(analysis HandAnalysis, cards []card.Card) (ParsedHand,
 	return ParsedHand{}, false
 }
 
-// parseTrioWithKickers 三带X
-func parseTrioWithKickers(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
+// isTrioWithKickers 三带X
+func isTrioWithKickers(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
 	cardLen := len(cards)
 	if len(analysis.trios) == 1 {
 		hand := ParsedHand{KeyRank: analysis.trios[0], Cards: cards}
@@ -55,8 +55,8 @@ func parseTrioWithKickers(analysis HandAnalysis, cards []card.Card) (ParsedHand,
 	return ParsedHand{}, false
 }
 
-// parsePlane 飞机
-func parsePlane(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
+// isPlane 飞机
+func isPlane(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
 	cardLen, planeLen := len(cards), len(analysis.trios)
 	if isContinuous(analysis.trios) && planeLen >= 2 {
 		hand := ParsedHand{KeyRank: analysis.trios[0], Length: planeLen, Cards: cards}
@@ -79,8 +79,8 @@ func parsePlane(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
 	return ParsedHand{}, false
 }
 
-// parseStraight 顺子
-func parseStraight(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
+// isStraight 顺子
+func isStraight(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
 	cardLen := len(cards)
 	if isContinuous(analysis.ones) && len(analysis.ones) == cardLen && cardLen >= 5 { // ABCDE+
 		return ParsedHand{Type: Straight, KeyRank: analysis.ones[0], Length: cardLen, Cards: cards}, true
@@ -88,28 +88,24 @@ func parseStraight(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) 
 	return ParsedHand{}, false
 }
 
-// parsePairStraight 连对
-func parsePairStraight(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
+// isPairStraight 连对
+func isPairStraight(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
 	if isContinuous(analysis.pairs) && len(analysis.pairs)*2 == len(cards) && len(analysis.pairs) >= 3 { // AABBCC+
 		return ParsedHand{Type: PairStraight, KeyRank: analysis.pairs[0], Length: len(analysis.pairs), Cards: cards}, true
 	}
 	return ParsedHand{}, false
 }
 
-// parseSimpleType 简单牌型：单、对、三
-func parseSimpleType(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
+// isSimpleType 简单牌型：单、对、三
+func isSimpleType(analysis HandAnalysis, cards []card.Card) (ParsedHand, bool) {
 	if len(analysis.counts) == 1 {
-		hand := ParsedHand{KeyRank: analysis.ones[0], Cards: cards}
 		switch len(cards) {
 		case 1:
-			hand.Type = Single
-			return hand, true
+			return ParsedHand{Type: Single, KeyRank: analysis.ones[0], Cards: cards}, true
 		case 2:
-			hand.Type = Pair
-			return hand, true
+			return ParsedHand{Type: Pair, KeyRank: analysis.pairs[0], Cards: cards}, true
 		case 3:
-			hand.Type = Trio
-			return hand, true
+			return ParsedHand{Type: Trio, KeyRank: analysis.trios[0], Cards: cards}, true
 		}
 	}
 	return ParsedHand{}, false

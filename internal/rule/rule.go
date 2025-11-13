@@ -2,7 +2,7 @@ package rule
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/palemoky/fight-the-landlord-go/internal/card"
 )
@@ -77,7 +77,7 @@ func analyzeCards(cards []card.Card) HandAnalysis {
 
 	// 对结果进行排序，方便后续判断连续性
 	sortRanks := func(ranks []card.Rank) {
-		sort.Slice(ranks, func(i, j int) bool { return ranks[i] < ranks[j] })
+		slices.Sort(ranks)
 	}
 	sortRanks(analysis.fours)
 	sortRanks(analysis.trios)
@@ -112,35 +112,35 @@ func ParseHand(cards []card.Card) (ParsedHand, error) {
 	analysis := analyzeCards(cards)
 
 	// 王炸
-	if hand, ok := parseRocket(analysis, cards); ok {
+	if hand, ok := isRocket(analysis, cards); ok {
 		return hand, nil
 	}
 	// 炸弹
-	if hand, ok := parseBomb(analysis, cards); ok {
+	if hand, ok := isBomb(analysis, cards); ok {
 		return hand, nil
 	}
 	// 四带二
-	if hand, ok := parseFourWithKickers(analysis, cards); ok {
+	if hand, ok := isFourWithKickers(analysis, cards); ok {
 		return hand, nil
 	}
 	// 三带X
-	if hand, ok := parseTrioWithKickers(analysis, cards); ok {
+	if hand, ok := isTrioWithKickers(analysis, cards); ok {
 		return hand, nil
 	}
 	// 飞机
-	if hand, ok := parsePlane(analysis, cards); ok {
+	if hand, ok := isPlane(analysis, cards); ok {
 		return hand, nil
 	}
 	// 顺子
-	if hand, ok := parseStraight(analysis, cards); ok {
+	if hand, ok := isStraight(analysis, cards); ok {
 		return hand, nil
 	}
 	// 连对
-	if hand, ok := parsePairStraight(analysis, cards); ok {
+	if hand, ok := isPairStraight(analysis, cards); ok {
 		return hand, nil
 	}
 	// 简单牌型
-	if hand, ok := parseSimpleType(analysis, cards); ok {
+	if hand, ok := isSimpleType(analysis, cards); ok {
 		return hand, nil
 	}
 
