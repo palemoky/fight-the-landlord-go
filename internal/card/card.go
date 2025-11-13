@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"strconv"
 	"time"
+	"fmt"
 )
 
 // Suit 定义花色
@@ -91,6 +92,43 @@ func (r Rank) String() string {
 			return "10"
 		}
 		return strconv.Itoa(int(r))
+	}
+}
+
+func RankFromChar(char rune) (Rank, error) {
+	switch char {
+	case '3':
+		return Rank3, nil
+	case '4':
+		return Rank4, nil
+	case '5':
+		return Rank5, nil
+	case '6':
+		return Rank6, nil
+	case '7':
+		return Rank7, nil
+	case '8':
+		return Rank8, nil
+	case '9':
+		return Rank9, nil
+	case 'T':
+		return Rank10, nil
+	case 'J':
+		return RankJ, nil
+	case 'Q':
+		return RankQ, nil
+	case 'K':
+		return RankK, nil
+	case 'A':
+		return RankA, nil
+	case '2':
+		return Rank2, nil
+	case 'B':
+		return RankBlackJoker, nil
+	case 'R':
+		return RankRedJoker, nil
+	default:
+		return -1, fmt.Errorf("无法识别的点数: %c", char)
 	}
 }
 
