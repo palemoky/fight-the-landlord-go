@@ -176,8 +176,10 @@ func CanBeat(newHand, lastHand ParsedHand) bool {
 	return newHand.KeyRank > lastHand.KeyRank
 }
 
+var CanBeatWithHand = canBeatWithHand
+
 // CanBeatWithHand 检查一个玩家的整手牌中是否存在任何可以打过 opponentHand 的组合
-func CanBeatWithHand(playerHand []card.Card, opponentHand ParsedHand) bool {
+func canBeatWithHand(playerHand []card.Card, opponentHand ParsedHand) bool {
 	// 1. 如果是新一轮，总是有牌可出
 	if opponentHand.IsEmpty() {
 		return true
