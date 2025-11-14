@@ -40,7 +40,7 @@ type ParsedHand struct {
 }
 
 func (p ParsedHand) IsEmpty() bool {
-	return len(p.Cards) == 0
+	return p.Type == Invalid
 }
 
 // HandAnalysis 对一手牌进行预分析，统计不同点数的牌出现了几次
