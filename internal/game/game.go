@@ -156,9 +156,9 @@ func (g *Game) handlePlay(currentPlayer *Player, input string) error {
 		currentPlayer.Hand = card.RemoveCards(currentPlayer.Hand, cardsToPlay)
 
 		return nil
-	} else {
-		return errors.New("你的牌没有大过上家")
 	}
+
+	return errors.New("你的牌没有大过上家")
 }
 
 // advanceToNextTurn 推进回合，并为下一个玩家设置状态
