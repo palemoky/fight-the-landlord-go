@@ -19,10 +19,10 @@ const (
 type Game struct {
 	Players              [3]*Player
 	Deck                 card.Deck
-	LandlordCards        []card.Card
-	CurrentTurn          int
-	LastPlayedHand       rule.ParsedHand
-	LastPlayerIdx        int
+	LandlordCards        []card.Card     // 地主手牌
+	CurrentTurn          int             // 当前出牌玩家
+	LastPlayedHand       rule.ParsedHand // 上家出牌
+	LastPlayerIdx        int             // 上家
 	ConsecutivePasses    int
 	CardCounter          *card.CardCounter
 	CanCurrentPlayerPlay bool
@@ -91,14 +91,13 @@ func (g *Game) PlayTurn(input string) error {
 		return err
 	}
 
-	// 4. 如果游戏已经结束，直接返回
-	if len(currentPlayer.Hand) == 0 {
-		g.CanCurrentPlayerPlay = false // 游戏结束，下一个玩家无所谓了
-		return nil
-	}
-
-	// 5. 如果回合成功，则推进到下一回合，并更新状态
+	// 4. 如果回合成功，则推进到下一回合，并更新状态
 	g.advanceToNextTurn()
+
+	// 5. 如果游戏已经结束，更新状态
+	if len(currentPlayer.Hand) == 0 {
+		g.CanCurrentPlayerPlay = false
+	}
 
 	return nil
 }
