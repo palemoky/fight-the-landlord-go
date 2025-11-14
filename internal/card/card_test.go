@@ -48,6 +48,7 @@ func TestRankFromChar(t *testing.T) {
 	// 3. Loop through the test cases and run the assertions.
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			// Act: Call the function we are testing.
 			actualRank, err := RankFromChar(tc.inputChar)
 
@@ -298,6 +299,7 @@ func TestFindCardsInHand(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			actualCards, err := FindCardsInHand(tc.hand, tc.input)
 
 			if tc.expectError {
@@ -372,6 +374,7 @@ func TestRemoveCards(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			actualHand := RemoveCards(tc.initialHand, tc.cardsToRemove)
 			// ElementsMatch is perfect here as well, in case the order changes.
 			assert.ElementsMatch(t, tc.expectedHand, actualHand)

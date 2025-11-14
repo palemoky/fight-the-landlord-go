@@ -16,13 +16,11 @@ func testPlayerCards(ranks ...card.Rank) []card.Card {
 }
 
 func TestPlayer_SortHand(t *testing.T) {
-	type testCase struct {
+	testCases := []struct {
 		name         string      
 		initialHand  []card.Card 
 		expectedHand []card.Card 
-	}
-
-	testCases := []testCase{
+	}{
 		{
 			name:         "standard unsorted hand",
 			initialHand:  testPlayerCards(card.Rank5, card.RankA, card.Rank3, card.RankK),
@@ -57,6 +55,7 @@ func TestPlayer_SortHand(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			player := Player{Hand: tc.initialHand}
 			player.SortHand()
 			assert.Equal(t, tc.expectedHand, player.Hand, "The hand should be sorted correctly.")

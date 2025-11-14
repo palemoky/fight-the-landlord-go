@@ -35,6 +35,7 @@ func TestIsContinuous(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tc.expected, isContinuous(tc.ranks))
 		})
 	}
@@ -103,6 +104,7 @@ func TestParseHand(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			parsedHand, err := ParseHand(tc.cards)
 
 			if tc.expectError {
@@ -153,6 +155,7 @@ func TestCanBeat(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tc.expected, CanBeat(tc.newHand, tc.lastHand))
 		})
 	}
@@ -348,6 +351,7 @@ func TestCanBeatWithHand(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			// Sort the hand as it would be in the game, which might affect some logic.
 			sort.Slice(tc.playerHand, func(i, j int) bool { return tc.playerHand[i].Rank < tc.playerHand[j].Rank })
 

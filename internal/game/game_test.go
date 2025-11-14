@@ -133,6 +133,7 @@ func TestHandlePass(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			g := setupTestGame()
 			tc.setupGame(g)
 
@@ -219,6 +220,7 @@ func TestHandlePlay(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			g := setupTestGame()
 			player := tc.setupGame(g)
 
@@ -284,6 +286,7 @@ func TestAdvanceToNextTurn(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			g := setupTestGame()
 			tc.setupGame(g)
 
