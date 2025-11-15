@@ -2,6 +2,7 @@ package card
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"unicode/utf8"
 
@@ -424,5 +425,52 @@ func FuzzRankFromChar(f *testing.F) {
 				t.Errorf("对于输入 '%s'，返回了无效的 Rank: %d", input, rank)
 			}
 		}
+	})
+}
+
+// FuzzFindCardsInHand 对 FindCardsInHand 函数进行模糊测试
+func FuzzFindCardsInHand(f *testing.F) {
+	// 添加一些种子语料库
+	// 格式：用一个特殊的分隔符（比如 |）来分隔手牌和输入字符串
+	f.Add("34567|345") // 正常情况
+	f.Add("AKQJ10|BR") // 王炸检查
+	f.Add("B|BR")      // 手牌不全，无法出王炸
+	f.Add("333|3333")  // 手牌不够
+	f.Add("|345")      // 空手牌
+	f.Add("345|")      // 空输入
+	f.Add("345|345X")  // 无效输入
+
+	f.Fuzz(func(t *testing.T, data string) {
+		// 将模糊测试生成的字符串拆分为手牌部分和出牌部分
+		parts := strings.SplitN(data, "|", 2)
+		if len(parts) != 2 {
+			return // 如果格式不对，就跳过
+		}
+		handStr, inputStr := parts[0], parts[1]
+
+		var hand []Card
+		fullDeck := NewDeck()
+
+		deckMap := make(map[Rank]Card)
+		for _, card := range fullDeck {
+			if card.Rank == RankBlackJoker || card.Rank == RankRedJoker {
+				deckMap[card.Rank] = card
+			} else if _, ok := deckMap[card.Rank]; !ok {
+				// 对于普通牌，只存一张代表即可
+				deckMap[card.Rank] = card
+			}
+		}
+
+		for _, char := range handStr {
+			rank, err := RankFromChar(char)
+			if err == nil {
+				if card, ok := deckMap[rank]; ok {
+					hand = append(hand, card)
+				}
+			}
+		}
+
+		// 只关心它是否会 panic，所以不需要对返回值做过多断言
+		_, _ = FindCardsInHand(hand, inputStr)
 	})
 }
